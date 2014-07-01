@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+
+    <meta name="tags" contents="lua" />
+    <meta name="tags" contents="shaders" />
+
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <h1><a href="">i suck at games <strong></strong></a></h1>
+        </header><!-- /#banner -->
+        <nav id="menu"><ul>
+        </ul></nav><!-- /#menu -->
+<section id="content" class="body">
+  <header>
+    <h2 class="entry-title">
+      <a href="/learning-about-lua-shaders.html" rel="bookmark"
+         title="Permalink to learning about lua love shaders">learning about lua love shaders</a></h2>
+ 
+  </header>
+  <footer class="post-info">
+    <abbr class="published" title="2014-06-30T10:57:00">
+      Mon 30 June 2014
+    </abbr>
+    <address class="vcard author">
+      By <a class="url fn" href="/author/tonethemangmailcom.html">tonetheman@gmail.com</a>
+    </address>
+  </footer><!-- /.post-info -->
+  <div class="entry-content">
+    <p>I did not know lua/love had shaders. I found a great <a href="http://blogs.love2d.org/content/beginners-guide-shaders">article on starting shaders</a> today. Which was great in getting me started.</p>
+<p>What is even funnier about this I have only basic knowledge of how shaders work. But I am really good at reading code and adapting things. Once I saw how shaders worked in love/lua I remembered a shader site I had seen before and began trying to translate that code over to lua.</p>
+<div class="highlight"><pre><span class="kd">local</span> <span class="n">myShader</span> <span class="o">=</span> <span class="kc">nil</span>
+<span class="kd">local</span> <span class="n">time</span>
+
+<span class="k">function</span> <span class="nc">love</span><span class="p">.</span><span class="nf">load</span><span class="p">()</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">myShader</span> <span class="o">=</span> <span class="n">love</span><span class="p">.</span><span class="n">graphics</span><span class="p">.</span><span class="n">newShader</span><span class="s">[[</span>
+
+<span class="s">extern number time;</span>
+
+<span class="s">    vec4 effect( vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords ){</span>
+
+
+<span class="s">// Star Nest by Pablo Román Andrioli</span>
+<span class="s">// Modified a lot.</span>
+
+<span class="s">// This content is under the MIT License.</span>
+
+<span class="s">#define iterations 15</span>
+<span class="s">#define formuparam 0.530</span>
+
+<span class="s">#define volsteps 10</span>
+<span class="s">#define stepsize 0.120</span>
+
+<span class="s">#define zoom   1.900</span>
+<span class="s">#define tile   0.850</span>
+<span class="s">#define speed  0.0</span>
+
+<span class="s">#define brightness 0.0015</span>
+<span class="s">#define darkmatter 0.400</span>
+<span class="s">#define distfading 0.760</span>
+<span class="s">#define saturation 0.0010       </span>
+
+<span class="s">            // changed these two lines for lua</span>
+<span class="s">            vec2 uv=screen_coords.xy/love_ScreenSize.xy-.5;</span>
+<span class="s">            uv.y*=love_ScreenSize.y/love_ScreenSize.x;</span>
+
+
+<span class="s">            vec3 dir=vec3(uv*zoom,1.);</span>
+
+<span class="s">            float a2=time*speed+.5;</span>
+<span class="s">            float a1=0.0;</span>
+<span class="s">            mat2 rot1=mat2(cos(a1),sin(a1),-sin(a1),cos(a1));</span>
+<span class="s">            mat2 rot2=rot1;//mat2(cos(a2),sin(a2),-sin(a2),cos(a2));</span>
+<span class="s">            dir.xz*=rot1;</span>
+<span class="s">            dir.xy*=rot2;</span>
+
+<span class="s">            //from.x-=time;</span>
+<span class="s">            //mouse movement</span>
+<span class="s">            vec3 from=vec3(0.,0.,0.);</span>
+<span class="s">            from+=vec3(.05*time,.05*time,-2.);          </span>
+<span class="s">    from.xz*=rot1;</span>
+<span class="s">    from.xy*=rot2;</span>
+
+<span class="s">    //volumetric rendering</span>
+<span class="s">    float s=.1,fade=.2;</span>
+<span class="s">    vec3 v=vec3(0.4);</span>
+<span class="s">    for (int r=0; r&lt;volsteps; r++) {</span>
+<span class="s">        vec3 p=from+s*dir*.5;</span>
+<span class="s">        p = abs(vec3(tile)-mod(p,vec3(tile*2.))); // tiling fold</span>
+<span class="s">        float pa,a=pa=0.;</span>
+<span class="s">        for (int i=0; i&lt;iterations; i++) { </span>
+<span class="s">            p=abs(p)/dot(p,p)-formuparam; // the magic formula</span>
+<span class="s">            a+=abs(length(p)-pa); // absolute sum of average change</span>
+<span class="s">            pa=length(p);</span>
+<span class="s">        }</span>
+<span class="s">        float dm=max(0.,darkmatter-a*a*.001); //dark matter</span>
+<span class="s">        a*=a*a*2.; // add contrast</span>
+<span class="s">        if (r&gt;3) fade*=1.-dm; // dark matter, don&#39;t render near</span>
+<span class="s">        //v+=vec3(dm,dm*.5,0.);</span>
+<span class="s">        v+=fade;</span>
+<span class="s">        v+=vec3(s,s*s,s*s*s*s)*a*brightness*fade; // coloring based on distance</span>
+<span class="s">        fade*=distfading; // distance fading</span>
+<span class="s">        s+=stepsize;</span>
+<span class="s">    }</span>
+<span class="s">    v=mix(vec3(length(v)),v,saturation); //color adjust</span>
+<span class="s">    return vec4(v*.01,1.);</span>
+
+
+
+<span class="s">            }</span>
+<span class="s">    ]]</span>
+<span class="k">end</span>
+
+ <span class="k">function</span> <span class="nc">love</span><span class="p">.</span><span class="nf">update</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">time</span> <span class="o">+</span> <span class="n">dt</span><span class="p">;</span>
+    <span class="n">myShader</span><span class="p">:</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;</span><span class="s">time&quot;</span><span class="p">,</span><span class="n">time</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="k">function</span> <span class="nc">love</span><span class="p">.</span><span class="nf">draw</span><span class="p">()</span>
+    <span class="n">love</span><span class="p">.</span><span class="n">graphics</span><span class="p">.</span><span class="n">setShader</span><span class="p">(</span><span class="n">myShader</span><span class="p">)</span>
+
+    <span class="n">love</span><span class="p">.</span><span class="n">graphics</span><span class="p">.</span><span class="n">rectangle</span><span class="p">(</span><span class="s2">&quot;</span><span class="s">fill&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">800</span><span class="p">,</span> <span class="mi">600</span> <span class="p">)</span>
+
+    <span class="n">love</span><span class="p">.</span><span class="n">graphics</span><span class="p">.</span><span class="n">setShader</span><span class="p">()</span>
+<span class="k">end</span>
+</pre></div>
+
+
+<p>I found this code online and modified it only slightly to get it to work.</p>
+<p>The first changes I had to make were this section</p>
+<div class="highlight"><pre>    <span class="o">//</span> <span class="n">changed</span> <span class="n">these</span> <span class="n">two</span> <span class="n">lines</span> <span class="k">for</span> <span class="n">lua</span>
+    <span class="n">vec2</span> <span class="n">uv</span><span class="o">=</span><span class="n">screen_coords</span><span class="p">.</span><span class="n">xy</span><span class="o">/</span><span class="n">love_ScreenSize</span><span class="p">.</span><span class="n">xy</span><span class="o">-</span><span class="mf">.5</span><span class="p">;</span>
+    <span class="n">uv</span><span class="p">.</span><span class="n">y</span><span class="o">*=</span><span class="n">love_ScreenSize</span><span class="p">.</span><span class="n">y</span><span class="o">/</span><span class="n">love_ScreenSize</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+</pre></div>
+
+
+<p>Originally those lines looked like this</p>
+<div class="highlight"><pre><span class="o">//</span><span class="n">get</span> <span class="n">coords</span> <span class="ow">and</span> <span class="n">direction</span>
+    <span class="n">vec2</span> <span class="n">uv</span><span class="o">=</span><span class="n">gl_FragCoord</span><span class="p">.</span><span class="n">xy</span><span class="o">/</span><span class="n">resolution</span><span class="p">.</span><span class="n">xy</span><span class="o">-</span><span class="mf">.5</span><span class="p">;</span>
+    <span class="n">uv</span><span class="p">.</span><span class="n">y</span><span class="o">*=</span><span class="n">resolution</span><span class="p">.</span><span class="n">y</span><span class="o">/</span><span class="n">resolution</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+</pre></div>
+
+
+<p>The difference is that gl_FragCoord is ampped to screen_coords in love/lua and resolution is mapped to love_ScreenSize.</p>
+<p>The other thing that also took me a little time to figure out was the time variable. This part of the shader code</p>
+<div class="highlight"><pre><span class="n">extern</span> <span class="n">number</span> <span class="n">time</span><span class="p">;</span>
+</pre></div>
+
+
+<p>allows you to have an input variable. I send the variable over during the love.update function.</p>
+<div class="highlight"><pre><span class="n">myShader</span><span class="p">:</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;</span><span class="s">time&quot;</span><span class="p">,</span><span class="n">time</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Once again I am just starting shader programming but this lets you update the shader based on an ever increasing time value.</p>
+  </div><!-- /.entry-content -->
+</section>
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="http://getpelican.com/">Pelican</a>,
+                which takes great advantage of <a href="http://python.org">Python</a>.
+                </address><!-- /#about -->
+        </footer><!-- /#contentinfo -->
+</body>
+</html>
